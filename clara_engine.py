@@ -84,6 +84,18 @@ class ClaRAEngine:
             top_k=settings.top_k_documents
         )
 
+        # Check if we found any documents
+        if not retrieved_docs:
+            # No documents in database
+            answer_response = AnswerResponse(
+                conversation_id=conv_id,
+                answer="I don't have any documents to search through yet. Please upload some documents first using the upload section on the left.",
+                sources=[],
+                confidence_score=0.0,
+                used_clarifications=False
+            )
+            return None, answer_response
+
         # Step 3: Generate answer
         answer_response = self._generate_answer(
             query=query_request.query,
@@ -105,14 +117,20 @@ class ClaRAEngine:
 
 Query: "{query}"
 
-Analyze this query and determine if it needs clarification to provide better answers.
-Consider:
-1. Is the query too broad or vague?
-2. Are there multiple possible interpretations?
-3. Does it lack context that would help retrieval?
-4. Are there unspecified parameters or preferences?
+IMPORTANT: Only request clarification if the query is TRULY ambiguous with multiple completely different meanings.
+Simple, clear questions should NOT need clarification even if they're broad.
 
-If clarification is needed, generate 1-{settings.max_clarification_questions} specific, helpful questions.
+Examples of queries that DON'T need clarification:
+- "What is this document about?"
+- "Summarize the main points"
+- "What are the key findings?"
+- "Tell me about X" (where X is a clear topic)
+
+Examples that DO need clarification:
+- "What about performance?" (could be system/financial/employee performance)
+- "How did it go?" (too vague, unclear what "it" refers to)
+
+Analyze this query and determine if it TRULY needs clarification.
 
 Respond in JSON format:
 {{
@@ -126,6 +144,8 @@ Respond in JSON format:
         }}
     ]
 }}
+
+Be conservative - when in doubt, set needs_clarification to false.
 """
 
         response_text = self._call_llm(prompt)
@@ -209,17 +229,24 @@ Retrieved Context:
 {context}
 
 Instructions:
-1. Answer the query using ONLY information from the retrieved context
-2. Be specific and cite relevant parts of the documents
-3. If the context doesn't contain enough information, say so
-4. Provide a confidence score (0.0-1.0) for your answer
+1. Answer the query using the information from the retrieved context above
+2. Be helpful, clear, and specific in your answer
+3. If the context contains relevant information, provide a comprehensive answer
+4. If the context doesn't fully answer the question, provide what information is available and mention what's missing
+5. Provide a confidence score based on how well the context answers the question:
+   - 0.9-1.0: Excellent coverage, clear answer
+   - 0.7-0.9: Good coverage, mostly answered
+   - 0.5-0.7: Partial information available
+   - 0.0-0.5: Limited or no relevant information
 
 Respond in JSON format:
 {{
-    "answer": "your detailed answer",
+    "answer": "your detailed, helpful answer",
     "confidence_score": 0.0-1.0,
     "reasoning": "brief explanation of your confidence level"
 }}
+
+IMPORTANT: Be helpful and provide useful answers. Don't be overly restrictive.
 """
 
         response_text = self._call_llm(prompt)
