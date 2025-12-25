@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClaRA RAG System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .upload-section {
+            margin-bottom: 20px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: -9999px;
+        }
+
+        .file-input-label {
+            display: block;
+            padding: 15px;
+            background: #f0f0f0;
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .file-input-label:hover {
+            background: #e8e8ff;
+            border-color: #764ba2;
+        }
+
+        .upload-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .upload-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .documents-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .document-item {
+            padding: 10px;
+            background: #f8f8f8;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .delete-btn {
+            padding: 5px 10px;
+            background: #ff4757;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 600px;
+        }
+
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8f8f8;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            max-width: 80%;
+        }
+
+        .message.user {
+            background: #667eea;
+            color: white;
+            margin-left: auto;
+        }
+
+        .message.assistant {
+            background: white;
+            border: 1px solid #e0e0e0;
+        }
+
+        .message.clarification {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+        }
+
+        .clarification-questions {
+            margin-top: 10px;
+        }
+
+        .clarification-question {
+            margin-bottom: 15px;
+        }
+
+        .clarification-question input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-top: 5px;
+        }
+
+        .clarification-btn {
+            padding: 10px 20px;
+            background: #ffc107;
+            color: #333;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .sources {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 5px;
+            font-size: 0.9em;
+        }
+
+        .input-section {
+            display: flex;
+            gap: 10px;
+        }
+
+        .query-input {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            font-size: 1em;
+        }
+
+        .send-btn {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+
+        .send-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .status {
+            padding: 10px;
+            background: #d4edda;
+            color: #155724;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+
+        .confidence-score {
+            display: inline-block;
+            padding: 5px 10px;
+            background: #28a745;
+            color: white;
+            border-radius: 5px;
+            font-size: 0.85em;
+            margin-left: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>ClaRA RAG System</h1>
+            <p>Upload documents and ask questions with intelligent clarifications</p>
+        </div>
+
+        <div class="main-content">
+            <!-- Left Panel: Document Management -->
+            <div>
+                <div class="card upload-section">
+                    <h2>Upload Documents</h2>
+                    <div class="status" id="upload-status"></div>
+
+                    <div class="file-input-wrapper">
+                        <input type="file" id="file-input" accept=".pdf,.docx,.txt,.csv,.xlsx">
+                        <label for="file-input" class="file-input-label">
+                            <span id="file-name">Click to select a file</span><br>
+                            <small>Supported: PDF, DOCX, TXT, CSV, XLSX</small>
+                        </label>
+                    </div>
+
+                    <button class="upload-btn" id="upload-btn" disabled>Upload Document</button>
+                </div>
+
+                <div class="card">
+                    <h2>Uploaded Documents</h2>
+                    <div class="documents-list" id="documents-list">
+                        <p style="text-align: center; color: #999;">No documents uploaded yet</p>
+                    </div>
+                    <button class="delete-btn" style="width: 100%; margin-top: 10px;" onclick="clearAllDocuments()">Clear All</button>
+                </div>
+            </div>
+
+            <!-- Right Panel: Chat Interface -->
+            <div class="card">
+                <h2>Ask Questions</h2>
+                <div class="chat-container">
+                    <div class="messages" id="messages">
+                        <div class="message assistant">
+                            <strong>Welcome!</strong><br>
+                            Upload documents using the panel on the left, then ask questions about them.
+                            I'll use ClaRA's intelligent clarification system to better understand your questions.
+                        </div>
+                    </div>
+
+                    <div class="input-section">
+                        <input
+                            type="text"
+                            class="query-input"
+                            id="query-input"
+                            placeholder="Ask a question about your documents..."
+                            onkeypress="handleKeyPress(event)"
+                        >
+                        <button class="send-btn" id="send-btn" onclick="sendQuery()">Send</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentConversationId = null;
+        let pendingClarifications = {};
+
+        // File input handling
+        document.getElementById('file-input').addEventListener('change', function(e) {
+            const fileName = e.target.files[0]?.name || 'Click to select a file';
+            document.getElementById('file-name').textContent = fileName;
+            document.getElementById('upload-btn').disabled = !e.target.files[0];
+        });
+
+        // Upload document
+        document.getElementById('upload-btn').addEventListener('click', async function() {
+            const fileInput = document.getElementById('file-input');
+            const file = fileInput.files[0];
+
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const statusDiv = document.getElementById('upload-status');
+            statusDiv.style.display = 'block';
+            statusDiv.className = 'status';
+            statusDiv.textContent = 'Uploading...';
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    statusDiv.textContent = result.message;
+                    fileInput.value = '';
+                    document.getElementById('file-name').textContent = 'Click to select a file';
+                    document.getElementById('upload-btn').disabled = true;
+                    loadDocuments();
+                } else {
+                    throw new Error(result.message);
+                }
+            } catch (error) {
+                statusDiv.className = 'status error';
+                statusDiv.textContent = 'Error: ' + error.message;
+            }
+
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 5000);
+        });
+
+        // Load documents
+        async function loadDocuments() {
+            try {
+                const response = await fetch('/documents');
+                const data = await response.json();
+
+                const listDiv = document.getElementById('documents-list');
+
+                if (data.documents && data.documents.length > 0) {
+                    listDiv.innerHTML = data.documents.map(doc => `
+                        <div class="document-item">
+                            <div>
+                                <strong>${doc.source_file}</strong><br>
+                                <small>${doc.chunks} chunks</small>
+                            </div>
+                            <button class="delete-btn" onclick="deleteDocument('${doc.document_id}')">Delete</button>
+                        </div>
+                    `).join('');
+                } else {
+                    listDiv.innerHTML = '<p style="text-align: center; color: #999;">No documents uploaded yet</p>';
+                }
+            } catch (error) {
+                console.error('Error loading documents:', error);
+            }
+        }
+
+        // Delete document
+        async function deleteDocument(documentId) {
+            if (!confirm('Are you sure you want to delete this document?')) return;
+
+            try {
+                await fetch(`/documents/${documentId}`, { method: 'DELETE' });
+                loadDocuments();
+            } catch (error) {
+                alert('Error deleting document: ' + error.message);
+            }
+        }
+
+        // Clear all documents
+        async function clearAllDocuments() {
+            if (!confirm('Are you sure you want to clear all documents?')) return;
+
+            try {
+                await fetch('/documents', { method: 'DELETE' });
+                loadDocuments();
+            } catch (error) {
+                alert('Error clearing documents: ' + error.message);
+            }
+        }
+
+        // Send query
+        async function sendQuery() {
+            const input = document.getElementById('query-input');
+            const query = input.value.trim();
+
+            if (!query) return;
+
+            // Add user message
+            addMessage(query, 'user');
+            input.value = '';
+
+            // Disable input while processing
+            document.getElementById('send-btn').disabled = true;
+            input.disabled = true;
+
+            try {
+                const response = await fetch('/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query: query,
+                        conversation_id: currentConversationId
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.needs_clarification) {
+                    handleClarifications(result);
+                } else {
+                    handleAnswer(result);
+                }
+
+                currentConversationId = result.conversation_id;
+
+            } catch (error) {
+                addMessage('Error: ' + error.message, 'assistant');
+            }
+
+            // Re-enable input
+            document.getElementById('send-btn').disabled = false;
+            input.disabled = false;
+            input.focus();
+        }
+
+        // Handle clarifications
+        function handleClarifications(response) {
+            const questionsHTML = response.questions.map((q, idx) => `
+                <div class="clarification-question">
+                    <strong>${q.question_text}</strong>
+                    ${q.suggested_options && q.question_type === 'multiple_choice'
+                        ? `<select id="clarification-${idx}" class="clarification-input">
+                            <option value="">Select an option</option>
+                            ${q.suggested_options.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+                           </select>`
+                        : `<input type="text" id="clarification-${idx}" class="clarification-input" placeholder="Your answer...">`
+                    }
+                </div>
+            `).join('');
+
+            const messageHTML = `
+                <div><strong>I need some clarification to better answer your question:</strong></div>
+                ${response.reasoning ? `<p><em>${response.reasoning}</em></p>` : ''}
+                <div class="clarification-questions">
+                    ${questionsHTML}
+                </div>
+                <button class="clarification-btn" onclick="submitClarifications(${JSON.stringify(response.questions).replace(/"/g, '&quot;')})">
+                    Submit Answers
+                </button>
+            `;
+
+            addMessage(messageHTML, 'clarification');
+        }
+
+        // Submit clarifications
+        async function submitClarifications(questions) {
+            const clarifications = {};
+
+            questions.forEach((q, idx) => {
+                const input = document.getElementById(`clarification-${idx}`);
+                if (input && input.value) {
+                    clarifications[q.question_id] = input.value;
+                }
+            });
+
+            const originalQuery = document.getElementById('query-input').getAttribute('data-original-query') ||
+                                 Array.from(document.querySelectorAll('.message.user')).pop()?.textContent || '';
+
+            try {
+                const response = await fetch('/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query: originalQuery,
+                        conversation_id: currentConversationId,
+                        clarifications: clarifications
+                    })
+                });
+
+                const result = await response.json();
+                handleAnswer(result);
+
+            } catch (error) {
+                addMessage('Error: ' + error.message, 'assistant');
+            }
+        }
+
+        // Handle answer
+        function handleAnswer(response) {
+            const sourcesHTML = response.sources && response.sources.length > 0
+                ? `<div class="sources">
+                    <strong>Sources:</strong><br>
+                    ${response.sources.slice(0, 3).map((s, idx) =>
+                        `<small>[${idx + 1}] ${s.chunk.metadata.source_file} (Relevance: ${(s.relevance_score * 100).toFixed(0)}%)</small>`
+                    ).join('<br>')}
+                   </div>`
+                : '';
+
+            const confidenceHTML = response.confidence_score
+                ? `<span class="confidence-score">Confidence: ${(response.confidence_score * 100).toFixed(0)}%</span>`
+                : '';
+
+            const messageHTML = `
+                ${response.answer}
+                ${confidenceHTML}
+                ${sourcesHTML}
+            `;
+
+            addMessage(messageHTML, 'assistant');
+        }
+
+        // Add message to chat
+        function addMessage(content, type) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.innerHTML = content;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        // Handle enter key
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendQuery();
+            }
+        }
+
+        // Load documents on page load
+        loadDocuments();
+    </script>
+</body>
+</html>
